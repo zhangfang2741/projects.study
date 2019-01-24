@@ -11,6 +11,5 @@ public class Main{
         hs.insert(21);
         hs.insert(3);
         hs.showHash();
-
     }
 }

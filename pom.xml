@@ -11,6 +11,7 @@
     <modules>
         <module>data.structure.agorithms</module>
         <module>data.hadoop.hive</module>
+        <module>data.hadoop.spark</module>
     </modules>
     <dependencies>
         <dependency>
