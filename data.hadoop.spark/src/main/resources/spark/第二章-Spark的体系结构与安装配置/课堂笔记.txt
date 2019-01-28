@@ -1,0 +1,236 @@
+
+
+二、Spark的体系结构与安装配置
+	1、Spark集群的体系结构
+		（1）主从结构
+			（*）主节点：Master（Cluster Manager）
+			（*）从节点：Worker
+	
+		（2）官方的一张图、自己也画了一张图
+	
+	2、Spark的安装与配置: （standalone）
+		（1）伪分布模式:spark81
+			(*) 解压：  tar -zxvf spark-2.1.0-bin-hadoop2.4.tgz -C ~/training/
+			(*) 设置环境变量： vi ~/.bash_profile
+				SPARK_HOME=/root/training/spark-2.1.0-bin-hadoop2.4
+				export SPARK_HOME
+
+				PATH=$SPARK_HOME/sbin:$SPARK_HOME/bin:$PATH
+				export PATH
+				
+				生效 source  ~/.bash_profile
+				
+				
+			(*) 修改配置文件： conf/spark-env.sh
+					export JAVA_HOME=/root/training/jdk1.7.0_75
+					export SPARK_MASTER_HOST=spark81
+					export SPARK_MASTER_PORT=7077
+
+					下面的参数（可选），默认值：spark占用所有的资源：内存、CPU核数**** 
+					export SPARK_WORKER_CORES=1	
+					export SPARK_WORKER_MEMORY=1024m	
+
+				配置：cp slaves.template slaves ---> 配置从节点的地址
+				     输入 
+					 spark81
+					 
+					 
+			(*) 启动spark集群: start-all.sh
+			(*) 访问spark web console:http://192.168.88.81:8080/
+			
+			(*) 配置spark的免密码登录---->  Linux的功能
+				(1) 采用不对称加密：生成一个密钥对
+				      公钥：给别人，加密
+					  私钥：给自己，解密
+					  
+					  注意：由公钥加的密，只能由对应的私钥进行解密
+					  
+				(2) 不对称加密实现免密码登录的原理: 画图
+				(3)  步骤：生成密钥对：ssh-keygen -t rsa
+				           将公钥给别人:ssh-copy-id -i .ssh/id_rsa.pub root@spark81
+		
+		（2）全分布模式: spark82  spark83  spark84
+			（*）配置spark的免密码登录
+			     (1) 在每台机器上生成各自的公钥和私钥
+				      ssh-keygen -t rsa
+					  
+				 (2) 将自己的公钥给别人: 在每台机器上都执行
+				     ssh-copy-id -i .ssh/id_rsa.pub root@spark82
+					 ssh-copy-id -i .ssh/id_rsa.pub root@spark83
+					 ssh-copy-id -i .ssh/id_rsa.pub root@spark84
+					 
+			（*）在spark82上进行配置
+				(1) 解压 tar -zxvf spark-2.1.0-bin-hadoop2.4.tgz -C ~/training/
+				(2) 设置环境变量 vi ~/.bash_profile
+						SPARK_HOME=/root/training/spark-2.1.0-bin-hadoop2.4
+						export SPARK_HOME
+
+						PATH=$SPARK_HOME/sbin:$SPARK_HOME/bin:$PATH
+						export PATH
+						
+						生效 source  ~/.bash_profile
+
+					顺便设置spark83和spark84的环境变量
+					
+				(3) 修改配置文件: conf/spark-env.sh
+						export JAVA_HOME=/root/training/jdk1.7.0_75
+						export SPARK_MASTER_HOST=spark82
+						export SPARK_MASTER_PORT=7077
+
+						下面的参数（可选），默认值：spark占用所有的资源：内存、CPU核数**** 
+						export SPARK_WORKER_CORES=1	
+						export SPARK_WORKER_MEMORY=1024m		
+
+				(4) 配置：cp slaves.template slaves ---> 配置从节点的地址
+					spark83
+					spark84
+			
+			（*）将spark82上配置好的目录复制到spark83 spark84上
+			     scp -r spark-2.1.0-bin-hadoop2.4/ root@spark83:/root/training
+				 scp -r spark-2.1.0-bin-hadoop2.4/ root@spark84:/root/training
+				      
+			（*）在spark82上启动集群
+			      start-all.sh
+	
+	3、Spark HA（high availablity 高可用性）的部署
+		原因：spark是一个主从结构
+		      主节点：master
+			  内存：worker信息、application、任务信息
+	
+		（1）基于文件的方式
+			（*）开发和测试的环境
+			（*）只存在一个master节点，
+			     worker信息、application、任务信息 ----> 内存
+				 
+			（*）提供一个目录（恢复目录），保存：worker信息、application、任务信息
+			     一旦Master出现了故障，可以通过重启Master进程，读取恢复目录中的状态信息
+				 
+			（*）缺点：手动重启的Master，不能自动实现Fail Over
+			（*）配置：全分布环境为例
+			     在spark82上进行配置
+				   (*) 创建一个恢复目录 mkdir /root/training/spark-2.1.0-bin-hadoop2.4/recovery
+				   (*) 修改配置文件： conf/spark-env.sh
+					export SPARK_DAEMON_JAVA_OPTS="-Dspark.deploy.recoveryMode=FILESYSTEM -Dspark.deploy.recoveryDirectory=/root/training/spark-2.1.0-bin-hadoop2.4/recovery"				   
+		
+		        启动Spark集群
+				 start-all.sh
+				 
+			（*）Demo演示
+			      (*) 执行spark shell ----> spark提供的一个交互式编程工具（命令行）
+				                            本身也是一个spark application
+					  在spark83上启动spark shell
+					  
+					  (1) spark-shell: 默认以本地模式启动
+					                   日志：(master = local[*], app id = local-1501263387786).
+									   
+									   指定Master---> 集群模式
+									   命令： spark-shell --master spark://spark82:7077
+									   日志：(master = spark://spark82:7077, app id = app-20170729013856-0000).
+		
+					  (2) 在spark82查看恢复目录
+					  (3) 模拟master宕机: 在spark82执行: stop-master.sh
+					  (4) 查看spark83上的application: spark-shell
+							17/07/29 01:41:16 WARN StandaloneAppClient$ClientEndpoint: Connection to spark82:7077 failed; waiting for master to reconnect...
+							17/07/29 01:41:16 WARN StandaloneSchedulerBackend: Disconnected from Spark cluster! Waiting for reconnection...
+							17/07/29 01:41:16 WARN StandaloneAppClient$ClientEndpoint: Connection to spark82:7077 failed; waiting for master to reconnect...
+		
+					  (5) 在spark82上重启master：start-master.sh
+		
+		（2）基于ZooKeeper的方式: 特点：（*）具有多个Master节点   （*）自动实现Fail Over
+			（一）ZooKeeper简介
+				(*) 看成是一个数据库：保存数据
+				(*) 是一个集群，主节点leader，从节点：follower
+				(*) 自动实现在集群内部之间数据的自动同步
+			
+				(*) 搭建ZooKeeper集群：spark82  spark83  spark84
+					(1) 在spark82上进行安装
+						(*) 解压  tar -zxvf zookeeper-3.4.6.tar.gz -C ~/training/
+						(*) 设置环境变量：vi ~/.bash_profile
+								ZOOKEEPER_HOME=/root/training/zookeeper-3.4.6
+								export ZOOKEEPER_HOME
+
+								PATH=$ZOOKEEPER_HOME/bin:$PATH
+								export PATH
+								
+							顺便设置spark83和spark84上的环境变量
+							
+							
+						(*) 编辑ZooKeeper的配置文件: /root/training/zookeeper-3.4.6/conf/zoo.cfg
+						    cp zoo_sample.cfg zoo.cfg
+							编辑
+							
+							ZooKeeper保存数据的目录
+							dataDir=/root/training/zookeeper-3.4.6/tmp
+							
+							指定ZK集群中的节点  2888:通信的端口   3888: 选举的端口
+							server.1=spark82:2888:3888
+							server.2=spark83:2888:3888
+							server.3=spark84:2888:3888
+							
+						(*) 指定主机的id号
+						    在/root/training/zookeeper-3.4.6/tmp创建文件:  myid
+							输入
+							1
+					
+					(2) 将spark82上的ZooKeeper目录复制到spark83和spark84上
+					     scp -r zookeeper-3.4.6/ root@spark83:/root/training
+						 scp -r zookeeper-3.4.6/ root@spark84:/root/training
+						 
+					(3) 修改spark83和spark84上的myid文件
+					(4) 在每台集群启动ZooKeeper集群
+					     zkServer.sh start
+						 
+						 查询ZK Server状态: zkServer.sh status
+						 
+					(5) Demo演示：ZK集群的数据同步
+					    启动客户端: zkCli.sh
+			
+			（二）基于ZooKeeper的方式实现Spark的HA
+				(1) 清空环境：spark83  spark84的安装目录
+				      rm -rf spark-2.1.0-bin-hadoop2.4/
+					  
+					  
+				(2) 在spark82上进行配置  conf/spark-env.sh
+                       export SPARK_DAEMON_JAVA_OPTS="-Dspark.deploy.recoveryMode=ZOOKEEPER -Dspark.deploy.zookeeper.url=spark82:2181,spark83:2181,spark84:2181 -Dspark.deploy.zookeeper.dir=/spark"				
+
+                    注释下面的两行
+					#export SPARK_MASTER_HOST=spark82
+					#export SPARK_MASTER_PORT=7077
+					
+				(3) 将配置好的spark复制到spark83 spark84上
+				     
+					 scp -r spark-2.1.0-bin-hadoop2.4/ root@spark83:/root/training
+					 scp -r spark-2.1.0-bin-hadoop2.4/ root@spark84:/root/training
+					 
+				(4) 在spark82上启动: start-all.sh
+				(5) 在spark83上手动启动master:  start-master.sh
+				(6) 停止spark82上的master：stop-master.sh
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

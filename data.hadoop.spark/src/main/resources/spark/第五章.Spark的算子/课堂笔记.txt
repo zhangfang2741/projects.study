@@ -1,0 +1,265 @@
+
+
+第五章. Spark的算子
+
+一、RDD基础
+	1、什么是RDD？（Desislent Distribution DataSet）
+		（*）是Spark中最基本的数据抽象
+		（*）特点：不可变、可分区，运行在分布式的环境上
+		（*）查看源码：RDD.scala
+			 *  - A list of partitions
+			      一组分片（分区）
+			 
+			 *  - A function for computing each SPLIT
+			     一个计算分片的函数
+			 
+			 *  - A list of dependencies on other RDDs
+				RDD彼此之间存在依赖
+			 
+			 *  - Optionally, a Partitioner for key-value RDDs (e.g. to say that the RDD is hash-partitioned)
+			 *  - Optionally, a list of preferred locations to compute each split on (e.g. block locations for an HDFS file)
+			 
+		（*）创建RDD：2种方式
+			（1）由外部的数据存储系统来创建：HDFS、HBase等等
+			      val rdd01 = sc.textFile("hdfs://hadoop111:9000/data/data.txt")
+			
+			（2）由一个已经存在的Scala集合创建
+			      Demo:     val rdd02 = sc.parallelize(Array(1,2,3,4,5,6,7,8))
+				  
+				  
+		（*）RDD算子的类型：Transformation:不会触发计算
+		                   Action：会触发计算
+							
+		（*）RDD可以进行分区: 会把不同的分区运行在不同的Worker  ---> 原理？
+		         Demo:   val rdd03 = sc.parallelize(Array(1,2,3,4,5,6,7,8),3)
+
+
+二、Transformation:不会触发计算，计算是延时计算	
+	val rdd01 = sc.parallelize(Array(1,2,3,4,5,6,7,8))
+
+	1、map(func)： 将输入的元素重新组成一个新的元组
+	     val rdd02 = rdd01.map((_,"*"))
+		 val rdd02 = rdd01.map((_ * 10))
+		 
+	2、filter(func)：返回一个新的RDD，该RDD是经过了func的运算返回true的元素
+	     val rdd03 = rdd01.filter(_ > 5)
+		 
+	3、flatMap(func) 压平操作
+	     val books = sc.parallelize(List("Hadoop","Oracle","Java"))
+		 
+		 执行压平操作：
+		 val rdd04 = books.flatMap(_.toList)
+		 结果：Array[Char] = Array(H, a, d, o, o, p, O, r, a, c, l, e, J, a, v, a)
+		 
+	4、union(otherDataset)：并集运算，注意：集合中元素的类似一致
+	     val rdd4 = sc.parallelize(List(5,6,7,8))
+		 val rdd5 = sc.parallelize(List(1,2,3,4,5))
+		 val rdd6 = rdd4.union(rdd5)
+	
+	5、intersection(otherDataset)：交集
+	     val rdd7 = rdd5.intersection(rdd4)
+		 
+	6、distinct([numTasks])) 去掉重复记录
+		 val rdd8 = sc.parallelize(List(1,2,3,4,5,3,5,8))
+		 rdd8.distinct.collect
+		 
+	7、groupByKey([numTasks])： 对于一个<k,v>格式的RDD，按照k进行分组
+	     val rdd = sc.parallelize(Array(("I",1),("love",3),("I",2)))
+		 rdd.groupByKey.collect
+		 
+		稍微复杂一点的例子：
+		 val sen = sc.parallelize(List("I love Beijing","I love China","Beijing is the capital of China"))
+		 sen.flatMap(_.split(" ")).map((_,1)).groupByKey.collect
+	
+	8、reduceByKey(func, [numTasks])：类似于groupByKey([numTasks])，区别：reduceByKey会有一个combiner的过程，对每个分区上的数据
+	     先做一次合并，效率更高.
+		 画图说明
+		 
+		 
+	9、cartesian(otherDataset) 笛卡尔积
+	     val rdd1 = sc.parallelize(List("tom","jerry"))
+		 val rdd2 = sc.parallelize(List("tom","keitty","mary"))
+		 val rdd3 = rdd1.cartesian(rdd2)
+
+
+三、Action：会触发计算
+	数据：val rdd1 = sc.parallelize(List(1,5,2,6,3,4,5,6,7))
+	
+	1、collect算子：触发计算，并以数组形式返回
+	      rdd1.collect
+		  
+	2、reduce(func)
+	      val rdd2 = rdd1.reduce(_ + _)
+		  
+	3、count：求个数
+	      rdd1.count
+		  
+	4、top：降序排序后，取出前几条记录
+	      rdd1.top(3)
+		  
+	5、take：取出前几条记录
+	      rdd1.take(3)
+		  
+	6、first：取出第一条记录
+	7、takeOrdered: 类似top操作，升序排序
+	      rdd1.takeOrdered(3)
+		  
+	8、foreach(func)
+	      rdd1.collect.foreach(println)
+
+四、RDD的缓存机制
+	1、通过调用方法：persist和cache ----> 是一种Transformation
+	   生效：调用action后才生效
+	   
+	   
+	2、默认：只会在内存中缓存数据,spark提供多种缓存位置：StorageLevel
+		  val NONE = new StorageLevel(false, false, false, false)
+		  val DISK_ONLY = new StorageLevel(true, false, false, false)
+		  val DISK_ONLY_2 = new StorageLevel(true, false, false, false, 2)
+		  val MEMORY_ONLY = new StorageLevel(false, true, false, true)
+		  val MEMORY_ONLY_2 = new StorageLevel(false, true, false, true, 2)
+		  val MEMORY_ONLY_SER = new StorageLevel(false, true, false, false)
+		  val MEMORY_ONLY_SER_2 = new StorageLevel(false, true, false, false, 2)
+		  val MEMORY_AND_DISK = new StorageLevel(true, true, false, true)
+		  val MEMORY_AND_DISK_2 = new StorageLevel(true, true, false, true, 2)
+		  val MEMORY_AND_DISK_SER = new StorageLevel(true, true, false, false)
+		  val MEMORY_AND_DISK_SER_2 = new StorageLevel(true, true, false, false, 2)
+		  val OFF_HEAP = new StorageLevel(true, true, true, false, 1)
+		  
+	3、Demo演示：sales订单
+		(1) 测试数据放到HDFS:    /data/sales
+		(2) 使用RDD读取文件
+		     val rdd1 = sc.textFile("hdfs://hadoop111:9000/data/sales")
+			 
+		(3) 求个数   rdd1.count   -----> 没有缓存，耗费时间：  3s
+		(4) 缓存数据: rdd1.cache    rdd1.persist  -----> 是一种Transformation，延时加载
+		    生效：    rdd1.count   -----> 没有缓存，耗费时间：  2s
+			
+		(5) 再执行一次： rdd1.count -----> 没有缓存，耗费时间：0.1 s
+		
+
+
+五、RDD的Checkpoint（检查点）机制：容错机制
+	1、什么是血统？lineage ---> 链条----> RDD执行的过程
+	2、Demo
+	
+		（*）本地模式的检查点: 要求spark-shell是本地模式
+		     sc.setCheckpointDir("/root/training/checkpoint")   ------> 设置本地检查点的目录
+			 
+			 val rdd1 = sc.textFile("hdfs://hadoop111:9000/data/sales")    ---> 生成RDD
+			 rdd1.checkpoint     -----> 设置检查点
+			 
+			 rdd1.count        -----> 一旦触发了action，就会在该目录下生成检查点
+		
+		（*）HDFS的检查点: 要求spark-shell是集群模式
+		     在HDFS上创建目录：  hdfs dfs -mkdir /checkpoint
+			 
+			 sc.setCheckpointDir("hdfs://hadoop111:9000/checkpoint")
+			 val rdd1 = sc.textFile("hdfs://hadoop111:9000/data/sales")
+			 rdd1.checkpoint
+			 rdd1.count
+
+
+六、RDD的依赖关系和Spark任务中的Stage（阶段）
+	1、RDD的依赖关系
+		（*）窄依赖：每一个父RDD的分区最多被一个子RDD分区使用
+		             独生子女
+		（*）宽依赖：多个子RDD的分区会依赖同一个父RDD的分区
+		             超生
+
+	 2、Spark任务中的Stage（阶段）：宽依赖
+	
+
+七、RDD基础练习
+
+
+? 练习1 ：val rdd1 = sc.parallelize(List(5, 6, 4, 7, 3, 8, 2, 9, 1, 10))
+			对RDD1中的每个元素乘以2，然后排序
+		  val rdd12 = rdd1.map(_ * 2).sortBy(x => x,true)
+            过滤出大于10的值
+		  val rdd3 = rdd12.filter(_ > 10)
+		    输出
+		  rdd3.collect
+		 
+
+? 练习2 ：val rdd1 = sc.parallelize(Array("a b c", "d e f", "h i j"))
+	      对每个元素先切分再压平
+		  val rdd2 = rdd1.flatMap(_.split(" "))
+
+
+? 练习3 ：
+	– val rdd1 = sc.parallelize(List(5, 6, 4, 3))
+	– val rdd2 = sc.parallelize(List(1, 2, 3, 4))
+	并集
+	val rdd3 = rdd1.union(rdd2)
+	
+	交集
+	val rdd4= rdd1.intersection(rdd2)
+	
+	去重
+	rdd3.distinct.collect
+	rdd4.collect
+
+
+? 练习4 ：
+	– val rdd1 = sc.parallelize(List(("tom", 1), ("jerry", 3), ("kitty", 2)))
+	– val rdd2 = sc.parallelize(List(("jerry", 2), ("tom", 1), ("shuke", 2)))
+	
+	执行链接操作：join
+	val rdd3 = rdd1.join(rdd2)
+	rdd3.collect
+	
+	并集
+	val rdd4 = rdd1 union rdd2
+	按key进行分组
+	rdd4.groupByKey
+	rdd4.collect
+	
+	
+
+? 练习5 ：val rdd1 = sc.parallelize(List(1, 2, 3, 4, 5))
+	聚合操作
+	      val rdd2 = redd1.reduce(_+_)
+
+? 练习6 ：
+	– val rdd1 = sc.parallelize(List(("tom", 1), ("jerry", 3), ("kitty", 2), ("shuke", 1)))
+	– val rdd2 = sc.parallelize(List(("jerry", 2), ("tom", 3), ("shuke", 2), ("kitty", 5)))
+	– val rdd3 = rdd1.union(rdd2)
+	
+	按key进行聚合操作
+	val rdd4 = rdd3.reduceByKey(_+_)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

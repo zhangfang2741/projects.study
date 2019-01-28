@@ -31,7 +31,7 @@ public class SparkJunit implements Serializable {
         //构造集合
         List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
         //并行化集合，创建初始RDD
-        JavaRDD<Integer> numberRDD = javaSparkContext.parallelize(numbers);
+        JavaRDD<Integer> numberRDD = javaSparkContext.parallelize(numbers,3);
         //使用map算子，将集合中的每个元素都乘以2
         JavaRDD<Integer> multipleNumberRDD = numberRDD.map((Function<Integer, Integer>) v1 -> v1 * 2);
         //打印新的RDD

@@ -1,0 +1,81 @@
+
+
+
+三、执行Spark Demo程序
+	1、执行Spark Example程序：蒙特卡罗求PI
+		（1）示例程序：$SPARK_HOME/examples/jars/spark-examples_2.11-2.1.0.jar
+		（2）所有示例：Java版本、Scala版本 -----> 查看示例的源码
+		（3）Demo：蒙特卡罗求PI
+			（*）原理
+			（*）命令：spark-submit 提交Spark任务
+			spark-submit --master spark://spark81:7077 --class org.apache.spark.examples.SparkPi jars/spark-examples_2.11-2.1.0.jar 1
+			Pi is roughly 3.140591405914059
+			
+			spark-submit --master spark://spark81:7077 --class org.apache.spark.examples.SparkPi jars/spark-examples_2.11-2.1.0.jar 10
+			Pi is roughly 3.142895142895143
+			
+			spark-submit --master spark://spark81:7077 --class org.apache.spark.examples.SparkPi jars/spark-examples_2.11-2.1.0.jar 100
+			Pi is roughly 3.141245914124591
+
+	
+	2、使用Spark Shell: 交互式命令行工具
+		（1）交互式命令行工具，可以书写Scala语言
+		（2）两种运行模式：
+			（*）本地模式：spark-shell 
+							日志：(master = local[*]
+			
+			（*）集群模式：spark-shell --master spark://spark81:7077
+			                日志：(master = spark://spark81:7077
+							
+							
+					版本信息：
+						Welcome to
+							  ____              __
+							 / __/__  ___ _____/ /__
+							_\ \/ _ \/ _ `/ __/  '_/
+						   /___/ .__/\_,_/_/ /_/\_\   version 2.1.0
+							  /_/
+
+						Using Scala version 2.11.8 (Java HotSpot(TM) Client VM, Java 1.7.0_75)
+			
+			（*）使用Spark Shell编程程序实现WordCount
+			
+		           流程：HDFS ----> Spark任务  ----> 存回HDFS
+				程序：
+				
+				sc：代表SparkContext对象，该对象是提交Spark任务的入口
+				
+				sc.textFile("hdfs://hadoop111:9000/data/data.txt")             从HDFS中读取数据，并生成一个RDD          
+				  .flatMap(_.split(" "))                                       对数据压平，并分词 ---->  (I) (love) (Beijing)
+				  .map((_,1))                                                  对每个单词，生产一个元组对
+				                                                                    -----> (I,1) (love,1) (Beijing,1)
+																					-----> (I,1) (love,1) (China,1)
+				  .reduceByKey(_+_)                                            按照key进行reduce，将value进行累加
+				  .saveAsTextFile("hdfs://hadoop111:9000/output/spark/wc1")    将结果存入HDFS
+				  
+				  
+				 RDD的算子(提供API)：Transformation、Action
+	
+	
+	3、编写WordCount程序（Scala、Java）
+	
+		运行：
+		spark-submit --master spark://spark81:7077 --class mydemo.WordCountScala temp/myscalawc.jar hdfs://hadoop111:9000/data/data.txt hdfs://hadoop111:9000/output/spark/scalawc
+	
+	    spark-submit --master spark://spark81:7077 --class mydemo.JavaWordCount temp/myjavawc.jar hdfs://hadoop111:9000/data/data.txt 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

@@ -1,0 +1,127 @@
+
+准备实验环境：
+约定：
+安装介质：/root/tools
+安装目录：/root/training
+
+1、Spark的伪分布环境
+	（*）spark81
+
+2、Spark的全分布环境
+	（*）spark82、spark83、spark84
+	
+3、安装配置JDK
+	以spark81为例
+	（1）解压tar -zxvf jdk-7u75-linux-i586.tar.gz -C ~/training/
+	（2）设置环境变量  vi ~/.bash_profile
+			JAVA_HOME=/root/training/jdk1.7.0_75
+			export JAVA_HOME
+
+			PATH=$JAVA_HOME/bin:$PATH
+			export PATH
+			
+		生效： source  ~/.bash_profile
+		
+	（3）复制JDK和设置环境变量
+	     scp -r jdk1.7.0_75/ root@spark82:/root/training
+		 scp -r jdk1.7.0_75/ root@spark83:/root/training
+		 scp -r jdk1.7.0_75/ root@spark84:/root/training
+	
+
+
+4、关闭防火墙和配置主机名 
+	(1) 防火墙状态:  service iptables status
+	                 service iptables stop
+					 
+					 
+	(2) 配置主机名  vi /etc/hosts
+			192.168.88.81 spark81
+			192.168.88.82 spark82
+			192.168.88.83 spark83
+			192.168.88.84 spark84
+
+
+一、什么是Spark？
+	1、什么是Spark？
+		(1) spark是一个针对大规模数据处理的通用快速（基于内存）引擎
+		(2) spark的生态圈中，包括：
+			（*）spark core ： spark内核
+			（*）spark SQL： 类似Hive
+			（*）spark streaming: 类似Storm/JStorm
+			（*）spark GraphX: 图形计算
+			（*）spark MLlib: 机器学习
+			
+		(3) spark特点：基于内存
+			spark的不足：由于Spark将内存的管理完全交给应用程序，所以容易出现：OOM（out of memory内存溢出）
+			解决：（*）优化、调优
+			      （*）使用Flink：并没有完全把内存交给应用程序
+	
+	2、为什么学习Spark？
+		（1）shuffle存在问题: 将中间处理的结果输出到磁盘上（HDFS）
+		（2）Spark：基于内存的(2次)
+			(*) spark 是MapReduce的替代方案
+			(*) 兼容HDFS、Hive，可以融入Hadoop的生态体系结构中
+			(*) 弥补MapReduce不足
+			
+		（3）spark的不足：由于Spark将内存的管理完全交给应用程序，所以容易出现：OOM（out of memory内存溢出）
+			(*) 配置默认：会占用主机上的所有内存和内核
+		
+	3、Spark的特点：快、易用、通用、兼容性
+		（1）快
+			（*）基于内存，速度比MR快100倍
+			（*）实现的高效的DAG执行引擎
+		
+		（2）易用
+			（*）支持：Java、Scala、Python
+			（*）支持很多高级算法（80多种） ---> 算子
+			（*）提供Spark shell的命令行
+		
+		（3）通用
+			（*）Spark用于批处理：Spark Core
+			（*）交互式查询：Spark SQL
+			（*）流式处理：Spark Streaming
+			（*）图计算：Spark GraphX
+			（*）机器学习：Spark MLLib
+
+		（4）兼容性
+			（*）运行在：StandAlone、Yarn、Mesos
+			（*）支持HDFS、HBase、Cassandra等等
+
+二、Spark 的体系结构与安装配置
+	1、Spark集群的体系结构
+	2、Spark的安装与部署
+	3、Spark的HA（high availablity）部署
+		(1)基于文件的方式
+		(2)基于ZooKeeper的方式
+
+三、执行Spark Demo 程序
+	1、执行Spark Example程序
+	2、使用Spark Shell
+	3、在IDEA中开发WordCount程序（Scala版本，Java 版本）
+
+四、Spark 的运行机制及原理分析
+	1、WordCount执行的流程分析
+	2、Spark提交任务的流程
+
+五、Spark 的算子
+	1、RDD基础
+	2、RDD的缓存机制
+	3、RDD的checkpoint（检查点）机制：容错机制
+	4、RDD的依赖关系和Spark任务中的stage
+	5、Transformation
+	6、Action
+	7、RDD 基础练习
+
+六、Spark RDD 的高级算子
+	1、mapPartitionsWithIndex
+	2、aggregate
+	3、aggregateByKey
+	4、coalesce和repartition
+	5、其他高级算子
+
+七、Spark 基础编程案例
+
+
+
+
+
