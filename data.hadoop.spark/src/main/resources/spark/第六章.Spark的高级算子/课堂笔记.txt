@@ -49,7 +49,7 @@
 			改造func1，接受字符串
 				def func2(index:Int,iter:Iterator[String]): Iterator[String]={
 					iter.toList.map(x=>"[PartID:"+index +",value="+x+ "]").iterator
-				}	
+				}
 			确定每个分区中的字符串：
 				rdd2.mapPartitionsWithIndex(func2).collect
 				[PartID:0,value=a], [PartID:0,value=b], [PartID:0,value=c], 
